@@ -1,0 +1,510 @@
+
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>元素当てタイピングゲーム - JavaScriptの遊び場</title>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="協力お題タイピングを練習するためだけのゲーム。">
+<link rel="stylesheet" href="../../css/common.css">
+<style>
+#container{ width: 450px; height: 360px; border: 2px solid #888; text-align: center; margin: 20px auto; padding: 15px 12px 15px 15px; background-color: #99ffe6; visibility: hidden; position: relative;}
+span.green{ color: green;}
+span.red{ color: red;}
+div.buttons{ font-weight: bold; display: inline-block; cursor: pointer;}
+#topDiv1,#topDiv2{ height: 40px;}
+#topDiv1 .buttons{ font-size: 18px; border: 2px solid #AAA; line-height: 1.8; margin: 0px 3px; width: 95px; background-color: #ccffff;}
+#topDiv2 div{ display: inline-block; line-height: 30px;}
+#countDisplay{ font-size: 20px; text-align: left; padding-left: 20px; width: 130px;}
+#timerDisplay{ font-size: 22px; width: 150px;}
+#dataDisplay{ font-size: 16px; text-align: right; padding-right: 10px; width: 140px;}
+#middleDiv1{ height: 142px; margin-top: 15px; margin-bottom: 20px;}
+#middleDiv1 .buttons{ width: 150px; font-size: 18px; border: 2px solid #AAA; padding: 5px 15px; background-color: #ccffff; position: relative;}
+#middleDiv1 .buttons:hover{ border-color: #666;}
+#totalTimeDisplay{ font-weight: bold; font-size: 18px; border: 2px solid #AAA; padding: 5px 15px; background-color: #ffcf99; position: relative;}
+#middleDiv2{ width: 400px; height: 130px; margin: 0 auto; margin-top: 13px; margin-bottom: 20px; border: 1px solid #AAA; background-color: #ccffff;}
+#numberDisplay{ height: 30px; font-size: 20px; text-align: left; padding: 10px 0px 0px 20px;}
+#symbolDisplay{ height: 100px; font-size: 36px; line-height: 80px;}
+#bottomDiv1 .buttons{ border: 2px solid #AAA; font-size: 24px; padding: 10px 0px 6px 0px; margin: 15px 6px 0px; width: 110px; color: #333; background-color: #ccffff; line-height: 1.5;}
+#bottomDiv1 .buttons:hover{ border-color: #666;}
+.small{ font-weight: bold; font-size: 20px;}
+.smaller{ font-weight: normal; font-size: 18px;}
+#message{ font-size: 30px; height: 40px;}
+#myTextInput{ font-size: 24px; width: 400px; text-align: center; font-family: inherit;}
+#bottomDiv2 .buttons{ margin: 13px 2px 10px; font-size: 18px; border: 2px solid #AAA; padding: 3px 10px; background-color: #ccffff;}
+#bottomDiv2 .buttons:hover{ border-color: #666;}
+
+#saveWindow{ visibility: hidden; position: absolute; left: 0px; top: 0px; width: 477px; height: 365px; background-color: rgba(255,255,255,0.6); padding-top: 25px;}
+#saveWindowChild{ background-color: #ccffff; border: 1px solid #AAA; width: 240px; height: 280px; margin: 0 auto; padding: 25px;}
+#saveButton,#restoreButton{ border-style: solid; border-color: #AAA; font-size: 16px; padding: 6px 0px; width: 100px;}
+#saveButton{ border-width: 2px 1px 2px 2px;}
+#restoreButton{ border-width: 2px 2px 2px 1px;}
+#textareaDiv{ width: 202px; height: 140px; border-style: solid; border-color: #AAA; border-width: 0px 2px 2px 2px; margin: 0 auto; padding-top: 10px; background-color: #ccffff;}
+#myTextarea{ width: 180px; height: 120px; padding: 5px; font-size: 14px;}
+#saveMessage{ font-size: 14px; margin-top: 10px;}
+#saveOKButton,#saveCancelButton{ border: 1px #AAA solid; background-color: #eeffff; padding: 3px 10px; margin-top: 5px;}
+
+.annotation{ font-size: 88%;}
+
+@media screen and (max-width: 450px){
+	#container{ width: 355px; padding: 15px 0px 15px 0px;}
+	#topDiv1 .buttons{ width: 75px; margin: 0px;}
+	#countDisplay{ padding-left: 20px; width: 110px;}
+	#timerDisplay{ width: 95px;}
+	#dataDisplay{ padding-right: 10px; width: 120px;}
+	#bottomDiv1 .buttons{ padding: 10px 0px 6px 0px; margin: 15px 4px 0px; width: 104px;}
+	#myTextInput{ width: 300px;}
+	#saveWindow{ width: 355px;}
+	#myTextarea{ font-size: 16px;}
+}
+
+</style>
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create','UA-41050125-2','auto');ga('send','pageview');
+</script>
+</head>
+<body>
+
+<div id='main'>
+	<noscript><p>JavaScriptを有効にしてください。</p></noscript>
+	<h3>協力タイピング<span class='date'></h3>
+	<article>
+		<div id='container'>
+			<div id='topDiv1'>
+				<div class='buttons' id='order_en_button'></div>
+				<div class='buttons' id='order_ja_button'>番号順</div>
+				<div class='buttons' id='random_ja_button'>ランダム</div>
+				<div class='buttons' id='random_en_button'></div>
+			</div>
+			<div id='topDiv2'>
+				<div id='countDisplay'></div><div id='timerDisplay'></div><div id='dataDisplay'></div>
+			</div>
+			<div id='middleDiv1'>
+				<div class='buttons' id='saveAndRecoverButton'>保存＆復元</div><br>
+				<div class='buttons' id='resetButton'>リセット</div><br>
+				<div id='totalTimeDisplay'></div>
+			</div>
+			<div id='middleDiv2'>
+				<div id='numberDisplay'></div>
+				<div id='symbolDisplay'></div>
+			</div>
+			<div id='bottomDiv1'></div>
+			<div id='bottomDiv2'>
+				<div id='message'></div>
+				<div id='formDiv'>
+					<form id='myForm'><input type='text' id='myTextInput'></form>
+				</div>
+				<div class='buttons' id='menuButton'>メニュー</div>
+				<div class='buttons' id='giveupButton'>ギブアップ</div>
+			</div>
+			<div id='saveWindow'><div id='saveWindowChild'>
+				<div class='buttons' id='saveButton'>保存</div><div class='buttons' id='restoreButton'>復元</div><br>
+				<div id='textareaDiv'><textarea id='myTextarea'></textarea></div>
+				<div id='saveMessage'><br></div>
+				<div class='buttons' id='saveOKButton'>OK</div>
+				<div class='buttons' id='saveCancelButton'>Cancel</div>
+			</div></div>
+		</div>
+		<h4>遊び方</h4>
+		<p>協力お題特化用タイピングです。</p>
+		<p>上部のボタンで2つのモードが選べます。それぞれに3つの難易度があります。</p>
+		<ul>
+			<li><b>初級:</b>あいあい傘～大阪府</li>
+			<li><b>中級:</b>あいあい傘～地震雷火事おやじ</li>
+			<li><b>上級:</b>あいあい傘～ロミオとジュリエットまで</li>
+		</ul>
+		<p></a>Enterキーで判定します。<br>また、ゲーム終了後に<b>Enterでリトライ</b>ができます。</p>
+		<h4>データの保存</h4>
+		<p>達成度をcookieで保存しています。また、<b>保存＆復元</b>で保存用のコードが表示されるので、コピー＆ペーストでテキストファイルなどに保存しておけば、cookieが消えてしまっても安心です。復元するときは、保存＆復元をクリックして「復元」タブの入力エリアにコピー＆ペーストし、「OK」で完了です。</p>
+		<h4>更新履歴</h4>
+		
+	</article>
+</div>
+
+<script>
+  function toggle_menu(){
+    let objNavMenu = document.getElementById('navMenu');
+    if (objNavMenu.className=='menuShown') objNavMenu.className = 'menuHidden';
+    else objNavMenu.className = 'menuShown';
+  }
+</script>
+
+
+</div>
+
+<script>
+(function(){
+	function d(ID){ return document.getElementById(ID);}
+
+	var isTouchScreen = 'ontouchstart' in window;
+	var action = (isTouchScreen) ? 'touchstart' : 'click';
+	var list = ("あいあい傘-アウトドア-赤ずきん-足かせ-あしながおじさん-アメリカ合衆国-アリの行列-痛車-一富士二鷹三茄子-一寸法師-インターホン-インド-ウサギとカメ-腕相撲-浦島太郎-運動会-運命の赤い糸-エジプト-遠足-大阪府-オーストラリア-沖縄県-お年玉-鬼-鬼ごっこ-お化け屋敷-おむすびころりん-街灯-傘地蔵-カチカチ山-門松-缶けり-韓国-乾杯-キス-肝試し-キャンプファイアー-京都府-金太郎-クリスマス-クローン-結婚式-剣道-こいのぼり-サッカー-サファリパーク-さるかに合戦-三匹のこぶた-獅子舞-地震雷火事おやじ-静岡県-七人の小人-ジャックと豆の木-白雪姫-人工呼吸-シンデレラ-心霊写真-スタンプリレー-相撲-節分-ゾンビ-ダイエット-大漁-卓球-七夕-玉入れ-中国-チョップ-月見-綱引き-鶴の恩返し-テニス-電車ごっこ-東京都-読書-ドッジボール-夏休み-奈良県-二人三脚-日本-人魚姫-年賀状-パイ投げ-バスケットボール-裸の王様-初詣-バドミントン-はなさかじいさん-花火大会-花見-花より団子-バレーボール-バレンタインデー-ハロウィン-ハワイ-パン食い競争-ヒッチハイク-雛祭り-風船-武器-ボールペン-ボクシング-北海道-北極-盆踊り-まくら投げ-マッチ売りの少女-祭り-みにくいアヒルの子-無敵-もちつき-桃太郎-野球-山梨県-雪合戦-四コマ漫画-ラブレター-ロミオとジュリエット").split('-');
+	var listLen = list.length;
+	var answer = {
+		ja: ("あいあいがさ-あうとどあ-あかずきん-あしかせ-あしながおじさん-あめりか-ありのぎょうれつ-いたしゃ-いちふじにたかさんなすび-いっすんぼうし-いんたーほん-いんど-うさぎとかめ-うでずもう-うらしまたろう-うんどうかい-あかいいと-えじぷと-えんそく-おおさか-おーすとらりあ-おきなわ-おとしだま-おに-おにごっこ-おばけやしき-おむすびころりん-がいとう-かさじぞう-かちかちやま-かどまつ-かんけり-こりあ-かんぱい-きす-きもだめし-きゃんぷふぁいやー-きょうと-きんたろう-くりすます-ふくせい-けっこんしき-けんどう-こいのぼり-さっかー-さふぁりぱーく-さるかにがっせん-さんびきのこぶた-ししまい-じしんかみなりかじおやじ-しずおか-しちにんのこびと-じゃっくとまめのき-しらゆきひめ-じんこうこきゅう-しんでれら-しんれいしゃしん-すたんぷりれー-すもう-せつぶん-ぞんび-だいえっと-たいりょう-たっきゅう-たなばた-たまいれ-ちゃいな-ちょっぷ-つきみ-つなひき-つるのおんがえし-てにす-でんしゃごっこ-とうきょう-どくしょ-どっじぼーる--なら-ににんさんきゃく-にほん-にんぎょひめ-ねんがじょう-ぱいなげ-ばすけ-はだかのおうさま-はつもうで-ばどみんとん-はなさかじいさん-はなびたいかい-はなみ-はなだん-ばれー-ばれんたいん-はろうぃん-はわい-ぱんくいそう-ひっちはいく-ひなまつり-ふうせん-ぶき-ぼーるぺん-ぼくしんぐ-ほっかいどう-ほっきょく-ぼんおどり-まくらなげ-まっちうりのしょうじょ-まつり-みにくいあひるのこ-むてき-もちつき-ももたろう-やきゅう-やまなし-ゆきがっせん-よんこま-らぶれたー-ろみおとじゅりえっと").split('-'),
+		en: ("Hdoe_eimLtimBrlimBrnCro_irgnOye_loieNo_oimMgeimAuiu-lmnu_iio_hshrsSlu-upu_hoieAgnPtsimClimSadu_iaimVndu_hoimMnaeeIo_oatNce_oprZn_alu_emnu_rei_eeimBoieKytnRbdu_totu_tru_icnu_ibu_oydnmTcntu_uhnu_hdu_aldu_ivrCdimIdu_i_nioyTluimIdn_eo_eimCeimBru_atau_eimPaedmu_edmu_rmtimSmru_uoimGdlnu_ebu_ypoimHlimEbu_hlu_tebu_ueimHfimTnau_ugtnWlrmReimOmu_rdu_ltnmGl_ecr_hlimLa_imt_ooimAttn_ao_rnimRdu_ciimToimPoatnu_rnu_etnu_ltnu_mrcu_uimBreimClfrimEntiimFrimMneeimNblu_arnimRtefrimDbimSaogu_oru_asu_eteimDrsatu_ongnu_oencu_ioimFeoimMsoimLvroimTnesn_gnsoyrgnHlu_ihu_eylu_oo_abnNtoe_xgnFurn_enSdu_ansu_lmnmAuiimSlcnPopou_ufrSlhrClrn_ro_oasu_acu_cnimTtnu_aaimCrmu_agns_rnCbl_iklCpe_icGlimGraimAsncSlnu_rmn_rpo_uiimSrnimYtimZroimNoimMlbeu_eheimRteimRoimPlaimSle_amu_nimTnAtmn_elru_oieXnnCsu-asu_aimLnhnmCru_rsoyimNoyimPoehu_aaimErpu_aoiimTrimDsrsu_omu_rimTuimYtrimLttu_anu_atlmTnse-ofa_hnu_simIiimPaiu_odMruyTalu_edBsuhPlnu_saieRdnFacu_aimAtnu_hru_rtciimUaimNpuimPuoimAeiimCru_eklu_aionu_isenu_emu_edlvu_oeimLwecu_uhrodu_unu_ebrimBhimHsimMinru_amtdimReteimCpriimNhnu_lrvu_ocvu_iemru_ensieOaesn").split('_')
+	};
+	for (let i=0; i<listLen; i++){
+		answer.ja[i] = answer.ja[i].split('-');
+		answer.en[i] = answer.en[i].split('-');
+	}
+	var mes = {
+
+		ja: {level: ['初級','中級','上級'], mode: {order: '番号順', random: 'ランダム'}, lang: '日本語', saveAndRecover: '保存＆復元', resetAll: 'リセット', total: '合計タイム： ', numberOfElements: '種類', seconds: '秒', correct: ' 正解！', achieved: '秒で達成！', record: '新記録！', menu: 'メニュー', start: 'スタート！', giveup: 'ギブアップ'}
+	};
+	var myLang = 'ja', myMode = 'order', myLevel = 0;
+	var dTotalTime = d('totalTimeDisplay'), dSymbol = d('symbolDisplay'), dNumber = d('numberDisplay'), dMessage = d('message'), dMyTextInput = d('myTextInput'), dCount = d('countDisplay'), dTimer = d('timerDisplay');
+	var left, count, current, checkable, timer, isGameFinished;
+
+	var lvl = [{QLen: 20}, {QLen: 50}, {QLen: listLen}];
+	for (var i=0; i<3; i++){
+		lvl[i].Q = [];
+		for (var j=0; j<lvl[i].QLen; j++) lvl[i].Q[j] = j;
+	}
+	var dat = [], modeArr = ['order','random'], langArr = ['ja','en'];
+	for (var i=0; i<3; i++){
+		dat[i] = {};
+		for (var j=0; j<2; j++){
+			dat[i][modeArr[j]] = {};
+			for (var k=0; k<2; k++) dat[i][modeArr[j]][langArr[k]] = 0;
+		}
+	}
+	for (var i=0; i<4; i++){
+		var langTemp = langArr[Math.floor(i/2)], modeTemp = modeArr[i%2];
+		d(modeTemp+'_'+langTemp+'_button').addEventListener(action,(function(langTemp,modeTemp){ return function(){
+			if (myMode!=modeTemp) myMode = modeTemp;
+			if (myLang!=langTemp){
+				myLang = langTemp;
+				d('saveAndRecoverButton').innerHTML = mes[myLang].saveAndRecover;
+				d('resetButton').innerHTML = mes[myLang].resetAll;
+				d('menuButton').innerHTML = mes[myLang].menu;
+				d('giveupButton').innerHTML = mes[myLang].giveup
+			}
+			openMenu();
+		}})(langTemp,modeTemp),false);
+	}
+	for (var i=0,str2=''; i<3; i++){
+		str2 += "<div class='buttons' id='level"+i+"'></div>";
+	}
+	d('bottomDiv1').innerHTML = str2;
+
+	d('myForm').addEventListener('submit',function(e){
+		e.preventDefault();
+		if (isGameFinished)	return levelButtonAction(myLevel);
+		return checkInput();
+	},false);
+
+	function checkInput(){
+		if (!checkable) return;
+		var str = dMyTextInput.value, correct = false, c = left[current];
+		if (myLang=='en'){
+			str = str.toLowerCase();
+			for (var x=0,X=answer[myLang][c].length; x<X; x++){
+				if (answer[myLang][c][x].toLowerCase()==str){ correct = true; break;}
+			}
+		}else if (myLang=='ja'){
+			for (var x=0,X=answer[myLang][c].length; x<X; x++){
+				if (answer[myLang][c][x]==str){ correct = true; break;}
+			}
+		}
+		if (correct){
+			checkable = false;
+			clearTimeout(timer);
+			dMyTextInput.value = '';
+			left.splice(current,1);
+			var txt = myLang=='en' ? list[c]+' is ' : '';
+			var lag = myLang=='en' ? 500 : 350;
+			dMessage.innerHTML = txt+answer[myLang][c][0]+mes[myLang].correct;
+			count.leftCount--;
+			updateCount();
+			if (count.leftCount==0){
+				count.stopTime = (new Date()).getTime();
+				clearTimeout(myTimer.timer);
+				dTimer.innerHTML = '';
+				dSymbol.innerHTML = '';
+				dNumber.innerHTML = '';
+				timer = setTimeout(finishGame,lag*1.5);
+			}else{
+				timer = setTimeout(function(){ dMessage.innerHTML = '';},lag);
+				nextQuestion();
+			}
+		}
+	}
+	d('menuButton').addEventListener(action,openMenu,false);
+	d('giveupButton').addEventListener(action,function(){
+		if (!checkable) return;
+		checkable = false;
+		clearTimeout(timer);
+		clearTimeout(myTimer.timer);
+		dTimer.innerHTML = '---';
+		dMessage.innerHTML = answer[myLang][left[current]][0];
+		dMyTextInput.disabled = true;
+	},false);
+	function updateCount(){
+		dCount.innerHTML = (lvl[myLevel].QLen-count.leftCount)+' / '+lvl[myLevel].QLen;
+	}
+	function nextQuestion(){
+		current = myMode=='order' ? 0 : Math.floor(Math.random()*count.leftCount);
+		dSymbol.innerHTML = list[left[current]];
+		dNumber.innerHTML = left[current]+1;
+		dMyTextInput.focus();
+		checkable = true;
+	}
+	function finishGame(){
+		var duration = Math.floor((count.stopTime-count.startTime)/100);
+		if (duration>99999) duration = 99999;
+		var txt = (duration/10).toFixed(1)+mes[myLang].achieved;
+		if (dat[myLevel][myMode][myLang]===0 || dat[myLevel][myMode][myLang]>duration){
+			dat[myLevel][myMode][myLang] = duration;
+			txt += mes[myLang].record;
+		}
+		dMessage.innerHTML = txt;
+		isGameFinished = true;
+		mySave('cookie');
+	}
+	function openMenu(){
+		clearTimeout(timer);
+		clearTimeout(myTimer.timer);
+		isGameFinished = false;
+		d('topDiv1').style.display = d('middleDiv1').style.display = d('bottomDiv1').style.display = 'block';
+		d('topDiv2').style.display = d('middleDiv2').style.display = d('bottomDiv2').style.display = 'none';
+		for (var i=0; i<3; i++) d('level'+i).innerHTML = "<div>"+mes[myLang].level[i]+"</div><div class='smaller'>("+lvl[i].QLen+mes[myLang].numberOfElements+")</div><div class='small'>"+(dat[i][myMode][myLang]==0 ? '---.-' : (dat[i][myMode][myLang]/10).toFixed(1))+mes[myLang].seconds+"</div>";
+		var complete = 0;
+		for (var i=0; i<4; i++){
+			var langTemp = langArr[Math.floor(i/2)], modeTemp = modeArr[i%2];
+			var tempObj = d(modeTemp+'_'+langTemp+'_button');
+			var flag = (langTemp==myLang && modeTemp==myMode);
+			tempObj.style.fontSize = flag ? '18px' : '14px';
+			tempObj.style.fontWeight = flag ? 'bold' : 'normal';
+			tempObj.style.borderColor = flag ? '#666' : '#AAA';
+			for (var j=0; j<3; j++){
+				if (dat[j][modeTemp][langTemp]==0) complete = -1;
+				else if (complete>=0) complete += dat[j][modeTemp][langTemp];
+			}
+		}
+		if (complete>=0){
+			d('saveAndRecoverButton').style.top = '8px';
+			d('resetButton').style.top = '18px';
+			dTotalTime.style.top = '32px';
+			dTotalTime.innerHTML = mes[myLang].total+(complete/10).toFixed(1)+mes[myLang].seconds;
+			dTotalTime.style.display = 'inline-block';
+		}else{
+			d('saveAndRecoverButton').style.top = '25px';
+			d('resetButton').style.top = '45px';
+			dTotalTime.style.display = 'none';
+		}
+		dSymbol.innerHTML = '';
+		dNumber.innerHTML = '';
+		dMessage.innerHTML = '';
+		mySave('cookie');
+	}
+	var myTimer = {
+		move: function(currentTime){
+			if (currentTime>99999) return dTimer.innerHTML = '∞';
+			dTimer.innerHTML = (currentTime/10).toFixed(1);
+			var curr = (new Date()).getTime();
+			if (currentTime>0) this.plan = 100+this.plan-(curr-this.prev);
+			this.prev = curr;
+			this.timer = setTimeout(function(){ myTimer.move(currentTime+1);},this.plan);
+		},
+		plan: 100,
+		timer: undefined,
+		prev: undefined
+	};
+	for (var I=0; I<3; I++){
+		d('level'+I).addEventListener(action,(function(I){ return function(){
+			levelButtonAction(I);
+		}})(I),false);
+		if (!isTouchScreen) d('level'+I).addEventListener('contextmenu',(function(I){ return function(e){
+			e.preventDefault();
+			if (confirm(mes[myLang].mode[myMode]+' - '+mes[myLang].level[I]+'の記録をリセットします。よろしいですか？')){
+				dat[I][myMode][myLang] = 0;
+				openMenu();
+			}
+		}})(I),false);
+	}
+	function levelButtonAction(LVL){
+		checkable = isGameFinished = false;
+		d('topDiv1').style.display = d('middleDiv1').style.display = d('bottomDiv1').style.display = 'none';
+		myLevel = LVL;
+		dTimer.innerHTML = '';
+		d('dataDisplay').innerHTML = mes[myLang].mode[myMode]+' - '+mes[myLang].level[myLevel];
+		dMyTextInput.disabled = true;
+		dMyTextInput.value = '';
+		count = { leftCount: lvl[myLevel].QLen};
+		left = [];
+		for (var i=0; i<count.leftCount; i++) left[i] = lvl[myLevel].Q[i];
+		dMessage.innerHTML = mes[myLang].start;
+		updateCount();
+		d('middleDiv2').style.visibility = 'hidden';
+		d('topDiv2').style.display = d('middleDiv2').style.display = d('bottomDiv2').style.display = 'block';
+		timer = setTimeout(function(){
+			count.startTime = (new Date()).getTime();
+			myTimer.move(0);
+			d('middleDiv2').style.visibility = 'visible';
+			dMessage.innerHTML = '';
+			dMyTextInput.disabled = false;
+			nextQuestion();
+		},800);
+	}
+
+	d('resetButton').addEventListener(action,function(){
+		if (confirm('すべての記録を消去します。よろしいですか？')){
+			for (var i=0; i<3; i++) for (var j=0; j<2; j++) for (var k=0; k<2; k++){
+				dat[i][modeArr[j]][langArr[k]] = 0;
+			}
+			openMenu();
+		}
+	},false);
+	d('saveAndRecoverButton').addEventListener(action,function(){
+		d('saveWindow').style.visibility = 'visible';
+		saveButtonFunction();
+	},false);
+	d('saveButton').addEventListener(action,saveButtonFunction,false);
+	function saveButtonFunction(){
+		d('saveOKButton').style.display = 'none';
+		d('saveButton').style.borderBottomWidth = '0px';
+		d('saveButton').style.backgroundColor = '#ccffff';
+		d('restoreButton').style.borderBottomWidth = '2px';
+		d('restoreButton').style.backgroundColor = '#eeffff';
+		d('saveCancelButton').innerHTML = 'Close';
+		mySave('text');
+		d('saveMessage').innerHTML = '上記コードをテキストファイルなどに保存してください。';
+	}
+	d('restoreButton').addEventListener(action,function(){
+		this.style.borderBottomWidth = '0px';
+		this.style.backgroundColor = '#ccffff';
+		d('saveButton').style.borderBottomWidth = '2px';
+		d('saveButton').style.backgroundColor = '#eeffff';
+		d('saveOKButton').style.display = 'inline-block';
+		d('saveCancelButton').innerHTML = 'Cancel';
+		d('myTextarea').value = '';
+		d('myTextarea').focus();
+		d('saveMessage').innerHTML = 'コードを貼り付けてください。';
+	},false);
+	d('saveCancelButton').addEventListener(action,function(){
+		d('saveWindow').style.visibility = 'hidden';
+	},false);
+	d('saveOKButton').addEventListener(action,function(){
+		var str = d('myTextarea').value;
+		if (!myRestore(str)) return d('saveMessage').innerHTML = 'コードが間違っています。';
+		openMenu();
+		d('saveWindow').style.visibility = 'hidden';
+	},false);
+	function mySave(where){
+		var maxVal = 0;
+		for (var i=0; i<3; i++) for (var j=0; j<2; j++) for (var k=0; k<2; k++){
+			var dur = dat[i][modeArr[j]][langArr[k]];
+			if (maxVal<dur) maxVal = dur;
+		}
+		var dig = 0, bin = 1;
+		while (bin<=maxVal){ dig++; bin *= 2;}
+		var str = '', str1 = '';
+		str = ('00000'+dig.toString(2)).slice(-6);
+		var zero = '';
+		for (var i=0; i<dig-1; i++) zero += '0';
+		for (var i=0; i<3; i++) for (var j=0; j<2; j++) for (var k=0; k<2; k++){
+			var dur = dat[i][modeArr[j]][langArr[k]];
+			if (dur==0) str += '0'; // 記録なし
+			else{
+				str += '1';
+				str1 += (zero+dur.toString(2)).slice(-dig);
+			}
+		}
+		str += str1;
+		while (str.length%6!=0) str += '0';
+		str = '=P1'+toBase64(str,true); // periodic table version 1
+		if (where=='cookie'){
+			var exp = new Date();
+			exp.setTime(exp.getTime()+90*24*3600*1000); // 90日間保存
+			exp = exp.toGMTString();
+			if (document.cookie){
+				var oldCookie =  document.cookie.split(';')[0];
+				if (oldCookie.indexOf('data=')>=0 && str==decodeURIComponent(oldCookie.replace('data=',''))) return; // 変更がなければ更新しない
+			}
+			document.cookie = 'data='+encodeURIComponent(str)+'; expires='+exp;
+		}else if ('text'){
+			d('myTextarea').value = str;
+			d('myTextarea').select();
+		}
+	}
+	function myRestore(input){
+		var str = input.replace(/[^A-Za-z0-9\/\+\*=]/g,'');
+		var version = str.slice(0,3);
+		if (version=='=P1'){ // version 1
+			str = str.slice(3);
+			str = toBase64(str,false);
+			var dig = parseInt(str.slice(0,6),2)-0;
+			str = str.slice(6);
+			var str0 = str.slice(0,12);
+			str = str.slice(12);
+			for (var i=0; i<3; i++) for (var j=0; j<2; j++) for (var k=0; k<2; k++){
+				if (str0.charAt(i*4+j*2+k)=='1'){ // 記録あり
+					dat[i][modeArr[j]][langArr[k]] = parseInt(str.slice(0,dig),2)-0;
+					if (dat[i][modeArr[j]][langArr[k]]>99999) dat[i][modeArr[j]][langArr[k]] = 99999;
+					str = str.slice(dig);
+				}else　dat[i][modeArr[j]][langArr[k]] = 0;
+			}
+			return true;
+		}else return false;
+	}
+	function toBase64(input,encode){
+		var base64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+		var output = '';
+		if (encode){
+			for (var j=0,J=input.length; j<J; j+=6) output += base64.charAt(parseInt((input+'').substr(j,6),2));
+			for (var j=0,J=output.length; j<J-4; j++){
+				for (var k=j; k<J-1; k++) if (output.charAt(j)!=output.charAt(k+1)) break;
+				if (k-j>=4){
+					var temp = output.slice(k+1);
+					output = output.slice(0,j+1)+'*'+(k-j)+'*'+temp;
+					j += 3;
+					J = output.length;
+				}
+			}
+		}else{
+			var input0 = input;
+			for (var j=1,J=input0.length; j<J-2; j++) if (input0.charAt(j)=='*'){
+				for (var k=j+2; k<j+5; k++) if (input0.charAt(k)=='*') break;
+				var temp = '', tempChar = input0.charAt(j-1);
+				for (var L=0,LL=input0.slice(j+1,k)-0; L<LL; L++) temp += ''+tempChar;
+				input0 = input0.slice(0,j)+temp+input0.slice(k+1);
+				j = j+LL;
+				J = input0.length;
+			}
+			input0 = input0.replace(/[^A-Za-z0-9\/\+]/g,'');
+			for (var j=0,J=input0.length; j<J; j++) output += ('00000'+(base64.indexOf(input0.charAt(j))-0).toString(2)).slice(-6);
+		}
+		return output;
+	}
+	if (document.cookie && document.cookie.split(';')[0].indexOf('data=')>=0){
+		myRestore(decodeURIComponent(document.cookie.split(';')[0].replace('data=','')));
+	}
+	function myDecode(str){
+		let input = decodeURIComponent(str).split(''), output = [], I = input.length, i = 0, j = 1;
+		while (i*2<I) output[i*2] = input[i++];
+		while (i<I){ output[j] = input[i++]; j+=2;}
+		return output.join('');
+	}
+	openMenu();
+	d('container').style.visibility = 'visible';
+})();
+</script>
+
+<script type="text/javascript"><!--
+var fc2footerparam = 'charset=' + (document.charset ? document.charset : document.characterSet) + '&url=' + document.location + '&service=0&r=' + Math.floor(Math.random()*99999999999);
+var fc2footertag = '<' + 'script src="//vip.chps-api.fc2.com/apis/footer/?' + fc2footerparam + '" charset="UTF-8"><' + '/script>';
+document.write(fc2footertag);
+//--></script>
+<!-- FC2, inc.-->
+<img src="//media.fc2.com/counter_img.php?id=50" style="visibility:hidden" alt="inserted by FC2 system" width="0" height="0">
+<!-- FC2, inc.-->
+</body>
+</html>
